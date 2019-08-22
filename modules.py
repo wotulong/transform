@@ -58,3 +58,69 @@ def get_token_embeddings(vocab_size, num_units, zero_pad=True):
                                    embeddings[1:, :]), 0)
 
     return embeddings
+
+
+def scaled_dot_product_attention(Q, K, V,
+                                 causality=False, dropout_rate=0.,
+                                 training=True,
+                                 scope="scaled_dot_product_attention"):
+    '''
+    attention实现
+    文章 3.2.1节
+
+    :param Q: queries，3d tensor->[N, T_q, d_K]
+    :param K: kyes, 3d tensor->[N, T_k, d_k]
+    :param V: values, 3d tensor->[N, T_k, d_v]
+    :param causality: if True, 应用masking
+    :param dropout_rate: [0,1]浮点数
+    :param training: 是否使用dropout
+    :param scope: 域
+    :return:
+    '''
+
+    with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
+        d_k = Q.get_shape().as_list()[-1]
+
+        # 点乘->[N, T_q, T_k]
+        outputs = tf.matmul(Q, tf.transpose(K, [0, 2, 1]))
+
+        # scale
+        outputs /= d_k ** 0.5
+
+        # key masking
+        outputs = mask(outputs, Q, K, type="key")
+
+        # masking
+        if causality:
+            outputs = mask(outputs, type='future')
+
+        # softmax
+        outputs = tf.nn.softmax(outputs)
+        attention = tf.transpose(outputs, [0, 2, 1])
+        tf.summary.image("attentionn", tf.expand_dims(attention[:1], -1))
+
+
+        # qury masking
+        outputs = mask(outputs, Q, K, type="query")
+
+
+        # dropout
+        outputs = tf.layers.dropout(outputs, rate=dropout_rate, training=training)
+
+
+        # weighted sum(context vectors)->[N, T_q, d_v]
+        outputs = tf.matmul(outputs, V)
+
+    return outputs
+
+
+def mask(inputs, queries=None, keys=None, type=None):
+    '''
+    Masts
+    :param inputs: 3d tensor->[N, T_q, T_k]
+    :param queries: 3d tensor->[N, T_q, d]
+    :param keys: 3d tensor->[N, T_k, d]
+    :param type: mask 类型（“query”,"key","value"）
+    :return:
+    '''
+
