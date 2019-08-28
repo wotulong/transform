@@ -85,15 +85,24 @@ class Transformer:
             # Blocks
             for i in range(self.hp.num_blocks):
                 # Masked self-attention(在此处causality == True)
-                dec = multihead_attention(
-                    queries = dec,
-                    keys = dec,
-                    num_heads = self.hp.num_heads,
-                    dropout_rate = self.hp.dropout_rate,
-                    training = training,
-                    causality = True,
-                    scope = "self_attention"
-                )
+                dec = multihead_attention(queries=dec,
+                                          keys=dec,
+                                          values=dec,
+                                          num_heads=self.hp.num_heads,
+                                          dropout_rate=self.hp.dropout_rate,
+                                          training=training,
+                                          causality=True,
+                                          scope="self_attention")
+
+                # Vanilla attention
+                dec = multihead_attention(queries=dec,
+                                          keys=memory,
+                                          values=memory,
+                                          num_heads=self.hp.num_heads,
+                                          dropout_rate=self.hp.dropout_rate,
+                                          training=training,
+                                          causality=False,
+                                          scope="vanilla_attention")
 
                 # feed forward
                 dec = ff(dec, num_units=[self.hp.d_ff, self.hp.d_model])

@@ -178,7 +178,7 @@ def mask(inputs, queries=None, keys=None, type=None):
 
 def multihead_attention(queries, keys, values,
                         num_heads=8,
-                        dropoout_rate=0.,
+                        dropout_rate=0.,
                         training=True,
                         causality=False,
                         scope='multihead_attention'):
@@ -212,7 +212,7 @@ def multihead_attention(queries, keys, values,
         V_ = tf.concat(tf.split(V, num_heads, axis=2), axis=0)
 
         # Attention
-        outputs = scaled_dot_product_attention(Q_, K_, V_, causality, dropoout_rate, training)
+        outputs = scaled_dot_product_attention(Q_, K_, V_, causality, dropout_rate, training)
 
         # Restore shape
         outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)
